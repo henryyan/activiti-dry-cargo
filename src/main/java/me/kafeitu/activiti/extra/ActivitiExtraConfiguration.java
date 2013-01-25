@@ -22,6 +22,8 @@ import org.activiti.engine.FormService;
 import org.activiti.engine.HistoryService;
 import org.activiti.engine.IdentityService;
 import org.activiti.engine.ManagementService;
+import org.activiti.engine.ProcessEngine;
+import org.activiti.engine.ProcessEngineConfiguration;
 import org.activiti.engine.RepositoryService;
 import org.activiti.engine.RuntimeService;
 import org.activiti.engine.TaskService;
@@ -35,6 +37,8 @@ public class ActivitiExtraConfiguration {
 
   // ACTIVITI SERVICES ///////////////////////////////////////////////////
 
+  protected ProcessEngine processEngine;
+  protected ProcessEngineConfiguration processEngineConfiguration;
   protected RepositoryService repositoryService = null;
   protected RuntimeService runtimeService = null;
   protected HistoryService historyService = null;
@@ -72,6 +76,9 @@ public class ActivitiExtraConfiguration {
    * 设置每个Helper的Activiti Services
    */
   private void initHelper(AbstractHelper helper) {
+    helper.setProcessEngine(processEngine);
+    helper.setProcessEngineConfiguration(processEngineConfiguration);
+    
     helper.setFormService(formService);
     helper.setHistoryService(historyService);
     helper.setIdentityService(identityService);
@@ -85,6 +92,22 @@ public class ActivitiExtraConfiguration {
 
   public RepositoryService getRepositoryService() {
     return repositoryService;
+  }
+
+  public ProcessEngine getProcessEngine() {
+    return processEngine;
+  }
+
+  public void setProcessEngine(ProcessEngine processEngine) {
+    this.processEngine = processEngine;
+  }
+
+  public ProcessEngineConfiguration getProcessEngineConfiguration() {
+    return processEngineConfiguration;
+  }
+
+  public void setProcessEngineConfiguration(ProcessEngineConfiguration processEngineConfiguration) {
+    this.processEngineConfiguration = processEngineConfiguration;
   }
 
   public void setRepositoryService(RepositoryService repositoryService) {

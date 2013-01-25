@@ -37,6 +37,13 @@
 		<property name="databaseSchemaUpdate" value="true" />
 		<property name="jobExecutorActivate" value="true" />
 		<property name="history" value="full" />
+		
+		<!-- 自定义表单字段类型 -->
+		<property name="customFormTypes">
+			<list>
+				<bean class="me.kafeitu.activiti.extra.form.UsersFormType" />
+			</list>
+		</property>
 	</bean>
 
 	<bean id="processEngine" class="org.activiti.spring.ProcessEngineFactoryBean">
@@ -52,7 +59,10 @@
 	<bean id="managementService" factory-bean="processEngine" factory-method="getManagementService" />
 	<!-- Activiti Enginee end -->
 
+	<!-- Activiti extra begin -->
 	<bean id="activitiExtraConfiguration" class="me.kafeitu.activiti.extra.ActivitiExtraConfiguration">
+		<property name="processEngine" ref="processEngine" />
+		<property name="processEngineConfiguration" ref="processEngineConfiguration" />
 		<property name="repositoryService" ref="repositoryService" />
 		<property name="runtimeService" ref="runtimeService" />
 		<property name="formService" ref="formService" />
@@ -69,5 +79,6 @@
 	<bean id="runtimeTaskHelper" factory-bean="activitiExtra" factory-method="getRuntimeTaskHelper" />
 	<bean id="processInstanceHelper" factory-bean="activitiExtra" factory-method="getProcessInstanceHelper" />
 	<bean id="processDefinitionHelper" factory-bean="activitiExtra" factory-method="getProcessDefinitionHelper" />
+	<!-- Activiti extra end -->
 
 </beans>

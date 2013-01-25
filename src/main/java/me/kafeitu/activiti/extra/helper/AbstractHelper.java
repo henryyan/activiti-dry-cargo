@@ -17,9 +17,16 @@ import org.activiti.engine.FormService;
 import org.activiti.engine.HistoryService;
 import org.activiti.engine.IdentityService;
 import org.activiti.engine.ManagementService;
+import org.activiti.engine.ProcessEngine;
+import org.activiti.engine.ProcessEngineConfiguration;
 import org.activiti.engine.RepositoryService;
 import org.activiti.engine.RuntimeService;
 import org.activiti.engine.TaskService;
+import org.activiti.engine.impl.cfg.ProcessEngineConfigurationImpl;
+import org.activiti.engine.impl.db.DbSqlSession;
+import org.activiti.engine.impl.db.DbSqlSessionFactory;
+import org.apache.ibatis.session.SqlSession;
+import org.apache.ibatis.session.SqlSessionFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -27,9 +34,11 @@ import org.slf4j.LoggerFactory;
  * @author henryyan
  */
 public class AbstractHelper {
-  
+
   protected Logger logger = LoggerFactory.getLogger(getClass());
 
+  protected ProcessEngine processEngine;
+  protected ProcessEngineConfiguration processEngineConfiguration;
   protected RepositoryService repositoryService = null;
   protected RuntimeService runtimeService = null;
   protected HistoryService historyService = null;
@@ -37,6 +46,33 @@ public class AbstractHelper {
   protected TaskService taskService = null;
   protected FormService formService = null;
   protected ManagementService managementService = null;
+
+  /**
+   * 开启一个mybatis的session，切记要关闭
+   */
+  protected SqlSession getSqlSession() {
+    ProcessEngineConfigurationImpl peci = (ProcessEngineConfigurationImpl) processEngineConfiguration;
+    DbSqlSessionFactory dbSqlSessionFactory = (DbSqlSessionFactory) peci.getSessionFactories().get(DbSqlSession.class);
+    SqlSessionFactory sqlSessionFactory = dbSqlSessionFactory.getSqlSessionFactory();
+    return sqlSessionFactory.openSession();
+  }
+
+  // -- getter and setter --//
+  public ProcessEngine getProcessEngine() {
+    return processEngine;
+  }
+
+  public void setProcessEngine(ProcessEngine processEngine) {
+    this.processEngine = processEngine;
+  }
+
+  public ProcessEngineConfiguration getProcessEngineConfiguration() {
+    return processEngineConfiguration;
+  }
+
+  public void setProcessEngineConfiguration(ProcessEngineConfiguration processEngineConfiguration) {
+    this.processEngineConfiguration = processEngineConfiguration;
+  }
 
   public RepositoryService getRepositoryService() {
     return repositoryService;

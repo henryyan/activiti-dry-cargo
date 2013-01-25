@@ -13,12 +13,12 @@
 
 package me.kafeitu.activiti.extra.test.base;
 
-import static org.junit.Assert.assertNotNull;
 import me.kafeitu.activiti.extra.ActivitiExtraConfiguration;
 import me.kafeitu.activiti.extra.helper.AbstractHelper;
 import me.kafeitu.activiti.extra.helper.ProcessInstanceHelper;
 import me.kafeitu.activiti.extra.helper.RuntimeTaskHelper;
 
+import org.activiti.spring.impl.test.SpringActivitiTestCase;
 import org.junit.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.test.context.ContextConfiguration;
@@ -28,8 +28,8 @@ import org.springframework.test.context.ContextConfiguration;
  * 
  * @author henryyan
  */
-@ContextConfiguration(locations = { "/applicationContext.xml" })
-public class ActivitiExtraConfigurationTest extends SpringTransactionalTestCase {
+@ContextConfiguration("classpath:applicationContext-test.xml")
+public class ActivitiExtraConfigurationTest extends SpringActivitiTestCase {
 
   @Autowired
   ActivitiExtraConfiguration activitiExtraConfiguration;
@@ -41,7 +41,7 @@ public class ActivitiExtraConfigurationTest extends SpringTransactionalTestCase 
   ProcessInstanceHelper processInstanceHelper;
 
   @Test
-  public void activitiExtraConfigurationTest() {
+  public void testAactivitiExtraConfiguration() {
     
     // base test
     assertNotNull(activitiExtraConfiguration);

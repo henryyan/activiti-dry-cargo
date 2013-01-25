@@ -14,17 +14,22 @@
 package me.kafeitu.activiti.extra.helper;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import org.activiti.engine.delegate.Expression;
 import org.activiti.engine.history.HistoricTaskInstance;
+import org.activiti.engine.history.HistoricVariableInstance;
 import org.activiti.engine.impl.RepositoryServiceImpl;
 import org.activiti.engine.impl.bpmn.behavior.UserTaskActivityBehavior;
+import org.activiti.engine.impl.persistence.entity.ExecutionEntity;
 import org.activiti.engine.impl.persistence.entity.ProcessDefinitionEntity;
 import org.activiti.engine.impl.pvm.delegate.ActivityBehavior;
 import org.activiti.engine.impl.pvm.process.ActivityImpl;
 import org.activiti.engine.impl.task.TaskDefinition;
+import org.activiti.engine.management.TablePage;
 import org.activiti.engine.task.Task;
+import org.apache.ibatis.session.SqlSession;
 
 /**
  * Task Helper
@@ -103,6 +108,144 @@ public class RuntimeTaskHelper extends AbstractHelper {
           }
         }
       }
+    }
+
+  }
+
+  /**
+   * 多实例（会签）加签
+   * 
+   * @param taskId
+   *          任务ID，多实例任务的任何一个都可以
+   * @param userIds
+   *          加签的人员
+   */
+  public void addSign(String taskId, String... userIds) {
+
+    // open new session
+    SqlSession sqlSession = getSqlSession();
+
+    try {
+      Task task = taskService.createTaskQuery().taskId(taskId).singleResult();
+      String processInstanceId = task.getProcessInstanceId();
+      String taskDefinitionKey = task.getTaskDefinitionKey();
+
+      // 插入ACT_RU_EXECUTION
+      // 获取针对多实例的运行时流程实例
+      ExecutionEntity executionEntityOfMany = (ExecutionEntity) runtimeService
+              .createNativeExecutionQuery()
+              .sql("select * from ACT_RU_EXECUTION where PARENT_ID_ = (select ID_ from ACT_RU_EXECUTION where PARENT_ID_ = '" + processInstanceId
+                      + "') limit 1").singleResult();
+      String processDefinitionId = executionEntityOfMany.getProcessDefinitionId();
+
+      // 获取ID
+      TablePage listPage = managementService.createTablePageQuery().tableName("ACT_GE_PROPERTY").listPage(2, 2);
+      Map<String, Object> idMap = listPage.getRows().get(0);
+
+      // 当前的ID
+      Long nextId = Long.parseLong(idMap.get("VALUE_").toString());
+
+      for (String userId : userIds) {
+
+        // 处理重复加签
+        long count = taskService.createTaskQuery().taskDefinitionKey(taskDefinitionKey).processInstanceId(processInstanceId).taskAssignee(userId).count();
+        if (count > 0) {
+          logger.warn("忽略重复加签，用户：{}, 任务：{}", userId, taskDefinitionKey);
+          continue;
+        }
+
+        // 插入一条新的运行时实例
+        Long newExecutionId = ++nextId;
+        StringBuilder insertExecution = new StringBuilder();
+        insertExecution.append("insert into ACT_RU_EXECUTION values(");
+        insertExecution.append(newExecutionId); // ID
+        insertExecution.append(", 1"); // REV_
+        insertExecution.append(", " + processInstanceId); // PROC_INST_ID_
+        insertExecution.append(", " + executionEntityOfMany.getBusinessKey()); // BUSINESS_KEY_
+        insertExecution.append(", " + executionEntityOfMany.getParentId()); // PARENT_ID_
+        insertExecution.append(", '" + processDefinitionId + "'"); // PROC_DEF_ID_
+        insertExecution.append(", " + executionEntityOfMany.getSuperExecutionId()); // SUPER_EXEC_
+        insertExecution.append(", '" + executionEntityOfMany.getActivityId() + "'"); // ACT_ID_
+        insertExecution.append(", 'TRUE'"); // IS_ACTIVE_
+        insertExecution.append(", 'TRUE'"); // IS_CONCURRENT_
+        insertExecution.append(", 'FALSE'"); // IS_SCOPE_
+        insertExecution.append(", 'FALSE'"); // IS_EVENT_SCOPE_
+        insertExecution.append(", '1'"); // SUSPENSION_STATE_
+        insertExecution.append(", " + executionEntityOfMany.getCachedEntityState()); // CACHED_ENT_STATE_
+
+        insertExecution.append(")");
+        sqlSession.getConnection().createStatement().execute(insertExecution.toString());
+
+        // 创建任务
+        // runtime task
+        Long newTaskId = ++nextId;
+        StringBuilder insertRuntimeTask = new StringBuilder();
+        insertRuntimeTask.append("insert into act_ru_task values(");
+        insertRuntimeTask.append(newTaskId + ", 1, " + newExecutionId + ", " + processInstanceId);
+        insertRuntimeTask.append(", '" + processDefinitionId + "'");
+        insertRuntimeTask.append(", '" + task.getName() + "', null, null");
+        insertRuntimeTask.append(", '" + taskDefinitionKey + "'");
+        insertRuntimeTask.append(", null");
+        insertRuntimeTask.append(", '" + userId + "'");
+        insertRuntimeTask.append(", null, 50, sysdate, null, '1'");
+        insertRuntimeTask.append(")");
+        sqlSession.getConnection().createStatement().execute(insertRuntimeTask.toString());
+
+        // history task
+        StringBuilder insertHistoryTask = new StringBuilder();
+        insertHistoryTask.append("insert into act_hi_taskinst values(");
+        insertHistoryTask.append(newTaskId);
+        insertHistoryTask.append(",'" + processDefinitionId + "'");
+        insertHistoryTask.append(", '" + taskDefinitionKey + "'");
+        insertHistoryTask.append(", " + processInstanceId + ", " + newExecutionId);
+        insertHistoryTask.append(", null");
+        insertHistoryTask.append(",'" + task.getName() + "'");
+        insertHistoryTask.append(", null");
+        insertHistoryTask.append(", null");
+        insertHistoryTask.append(", '" + userId + "'");
+        insertHistoryTask.append(", sysdate");
+        insertHistoryTask.append(", null");
+        insertHistoryTask.append(", null");
+        insertHistoryTask.append(", null");
+        insertHistoryTask.append(", 50");
+        insertHistoryTask.append(", null)");
+        sqlSession.getConnection().createStatement().execute(insertHistoryTask.toString());
+
+        // 更新主键ID
+        String updateNextId = "update ACT_GE_PROPERTY set VALUE_ = " + nextId + " where NAME_ = 'next.dbid'";
+        sqlSession.getConnection().createStatement().execute(updateNextId);
+
+        // 更新多实例相关变量
+        List<HistoricVariableInstance> list = historyService.createHistoricVariableInstanceQuery().processInstanceId(processInstanceId)
+                .variableNameLike("nrOf%").list();
+        Integer nrOfInstances = 0;
+        Integer nrOfActiveInstances = 0;
+        for (HistoricVariableInstance var : list) {
+          if (var.getVariableName().equals("nrOfInstances")) {
+            nrOfInstances = (Integer) var.getValue();
+          } else if (var.getVariableName().equals("nrOfActiveInstances")) {
+            nrOfActiveInstances = (Integer) var.getValue();
+          }
+        }
+
+        nrOfInstances++;
+        nrOfActiveInstances++;
+
+        String updateVariablesOfMultiinstance = "update ACT_HI_VARINST set LONG_ = " + nrOfInstances + ", TEXT_ = " + nrOfInstances + " where EXECUTION_ID_ = "
+                + executionEntityOfMany.getParentId() + " and NAME_ = 'nrOfInstances'";
+        sqlSession.getConnection().createStatement().execute(updateVariablesOfMultiinstance);
+
+        updateVariablesOfMultiinstance = "update ACT_HI_VARINST set LONG_ = " + nrOfActiveInstances + ", TEXT_ = " + nrOfActiveInstances
+                + " where EXECUTION_ID_ = " + executionEntityOfMany.getParentId() + " and NAME_ = 'nrOfActiveInstances'";
+        sqlSession.getConnection().createStatement().execute(updateVariablesOfMultiinstance);
+
+      }
+
+      sqlSession.commit();
+    } catch (Exception e) {
+      logger.error("failed to add sign for countersign", e);
+    } finally {
+      sqlSession.close();
     }
 
   }

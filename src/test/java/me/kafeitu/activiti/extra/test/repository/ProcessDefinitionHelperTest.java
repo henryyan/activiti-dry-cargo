@@ -13,29 +13,23 @@
 
 package me.kafeitu.activiti.extra.test.repository;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-
-import java.io.FileInputStream;
-import java.net.URL;
 import java.util.Map;
 
 import me.kafeitu.activiti.extra.helper.ProcessDefinitionHelper;
 
 import org.activiti.engine.RepositoryService;
-import org.activiti.engine.impl.util.ReflectUtil;
 import org.activiti.engine.repository.ProcessDefinition;
-import org.junit.Before;
+import org.activiti.engine.test.Deployment;
+import org.activiti.spring.impl.test.SpringActivitiTestCase;
 import org.junit.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.test.context.ContextConfiguration;
-import org.springframework.test.context.junit4.AbstractJUnit4SpringContextTests;
 
 /**
  * @author henryyan
  */
-@ContextConfiguration(locations = { "/applicationContext.xml" })
-public class ProcessDefinitionHelperTest extends AbstractJUnit4SpringContextTests {
+@ContextConfiguration("classpath:applicationContext-test.xml")
+public class ProcessDefinitionHelperTest extends SpringActivitiTestCase {
 
   @Autowired
   ProcessDefinitionHelper processDefinitionHelper;
@@ -43,21 +37,15 @@ public class ProcessDefinitionHelperTest extends AbstractJUnit4SpringContextTest
   @Autowired
   RepositoryService repositoryService;
 
-  @Before
-  public void setUp() throws Exception {
-    URL resource = ReflectUtil.getResource("diagrams/AutoAssignee.bpmn");
-    assertNotNull(resource);
-
-    repositoryService.createDeployment().addInputStream("AutoAssignee.bpmn20.xml", new FileInputStream(resource.getPath())).deploy();
-  }
-
   @Test
+  @Deployment(resources = "me/kafeitu/activiti/extra/test/runtime/AutoAssignee.bpmn")
   public void testUserTaskKeysByProcessDefinitionKey() throws Exception {
     Map<String, String> keys = processDefinitionHelper.getUserTaskKeysByProcessDefinitionKey("AutoAssignee");
     assertUserTaskKeyAndName(keys);
   }
 
   @Test
+  @Deployment(resources = "me/kafeitu/activiti/extra/test/runtime/AutoAssignee.bpmn")
   public void testUserTaskKeysByProcessDefinitionId() throws Exception {
     ProcessDefinition processDefinition = repositoryService.createProcessDefinitionQuery().latestVersion().singleResult();
     Map<String, String> keys = processDefinitionHelper.getUserTaskKeysByProcessDefinitionId(processDefinition.getId());
