@@ -13,6 +13,10 @@
 
 package me.kafeitu.activiti.extra.helper;
 
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.SQLException;
+import java.sql.Timestamp;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -123,7 +127,8 @@ public class RuntimeTaskHelper extends AbstractHelper {
   public void addSign(String taskId, String... userIds) {
 
     // open new session
-    SqlSession sqlSession = getSqlSession();
+    SqlSession sqlSession = openSession();
+    PreparedStatement ps = null;
 
     try {
       Task task = taskService.createTaskQuery().taskId(taskId).singleResult();
@@ -145,6 +150,8 @@ public class RuntimeTaskHelper extends AbstractHelper {
       // 当前的ID
       Long nextId = Long.parseLong(idMap.get("VALUE_").toString());
 
+      Connection connection = sqlSession.getConnection();
+
       for (String userId : userIds) {
 
         // 处理重复加签
@@ -156,66 +163,63 @@ public class RuntimeTaskHelper extends AbstractHelper {
 
         // 插入一条新的运行时实例
         Long newExecutionId = ++nextId;
-        StringBuilder insertExecution = new StringBuilder();
-        insertExecution.append("insert into ACT_RU_EXECUTION values(");
-        insertExecution.append(newExecutionId); // ID
-        insertExecution.append(", 1"); // REV_
-        insertExecution.append(", " + processInstanceId); // PROC_INST_ID_
-        insertExecution.append(", " + executionEntityOfMany.getBusinessKey()); // BUSINESS_KEY_
-        insertExecution.append(", " + executionEntityOfMany.getParentId()); // PARENT_ID_
-        insertExecution.append(", '" + processDefinitionId + "'"); // PROC_DEF_ID_
-        insertExecution.append(", " + executionEntityOfMany.getSuperExecutionId()); // SUPER_EXEC_
-        insertExecution.append(", '" + executionEntityOfMany.getActivityId() + "'"); // ACT_ID_
-        insertExecution.append(", 'TRUE'"); // IS_ACTIVE_
-        insertExecution.append(", 'TRUE'"); // IS_CONCURRENT_
-        insertExecution.append(", 'FALSE'"); // IS_SCOPE_
-        insertExecution.append(", 'FALSE'"); // IS_EVENT_SCOPE_
-        insertExecution.append(", '1'"); // SUSPENSION_STATE_
-        insertExecution.append(", " + executionEntityOfMany.getCachedEntityState()); // CACHED_ENT_STATE_
 
-        insertExecution.append(")");
-        sqlSession.getConnection().createStatement().execute(insertExecution.toString());
+        int counter = 1;
+        ps = connection.prepareStatement("insert into ACT_RU_EXECUTION values(?, 1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+        ps.setString(counter++, newExecutionId.toString()); // ID
+        ps.setString(counter++, processInstanceId); // PROC_INST_ID_
+        ps.setString(counter++, executionEntityOfMany.getBusinessKey()); // BUSINESS_KEY_
+        ps.setString(counter++, executionEntityOfMany.getParentId()); // PARENT_ID_
+        ps.setString(counter++, processDefinitionId); // PROC_DEF_ID_
+        ps.setString(counter++, executionEntityOfMany.getSuperExecutionId()); // SUPER_EXEC_
+        ps.setString(counter++, executionEntityOfMany.getActivityId()); // ACT_ID_
+        ps.setString(counter++, "TRUE"); // IS_ACTIVE_
+        ps.setString(counter++, "TRUE"); // IS_CONCURRENT_
+        ps.setString(counter++, "FALSE"); // IS_SCOPE_
+        ps.setString(counter++, "FALSE"); // IS_EVENT_SCOPE_
+        ps.setInt(counter++, 1); // SUSPENSION_STATE_
+        ps.setInt(counter++, executionEntityOfMany.getCachedEntityState()); // CACHED_ENT_STATE_
+        ps.executeUpdate();
 
         // 创建任务
         // runtime task
         Long newTaskId = ++nextId;
-        StringBuilder insertRuntimeTask = new StringBuilder();
-        insertRuntimeTask.append("insert into act_ru_task values(");
-        insertRuntimeTask.append(newTaskId + ", 1, " + newExecutionId + ", " + processInstanceId);
-        insertRuntimeTask.append(", '" + processDefinitionId + "'");
-        insertRuntimeTask.append(", '" + task.getName() + "', null, null");
-        insertRuntimeTask.append(", '" + taskDefinitionKey + "'");
-        insertRuntimeTask.append(", null");
-        insertRuntimeTask.append(", '" + userId + "'");
-        insertRuntimeTask.append(", null, 50, sysdate, null, '1'");
-        insertRuntimeTask.append(")");
-        sqlSession.getConnection().createStatement().execute(insertRuntimeTask.toString());
+        counter = 1;
+        ps = connection.prepareStatement("insert into act_ru_task values(?, 1, ?, ?, ?, ?, null, null, ?, null, ?, null, ?, ?, null, '1')");
+        ps.setString(counter++, newTaskId.toString());
+        ps.setString(counter++, newExecutionId.toString());
+        ps.setString(counter++, processInstanceId);
+        ps.setString(counter++, processDefinitionId);
+        ps.setString(counter++, task.getName());
+        ps.setString(counter++, taskDefinitionKey);
+        ps.setString(counter++, userId);
+        ps.setInt(counter++, task.getPriority());
+        ps.setTimestamp(counter++, new Timestamp(System.currentTimeMillis()));
+        ps.executeUpdate();
 
         // history task
-        StringBuilder insertHistoryTask = new StringBuilder();
-        insertHistoryTask.append("insert into act_hi_taskinst values(");
-        insertHistoryTask.append(newTaskId);
-        insertHistoryTask.append(",'" + processDefinitionId + "'");
-        insertHistoryTask.append(", '" + taskDefinitionKey + "'");
-        insertHistoryTask.append(", " + processInstanceId + ", " + newExecutionId);
-        insertHistoryTask.append(", null");
-        insertHistoryTask.append(",'" + task.getName() + "'");
-        insertHistoryTask.append(", null");
-        insertHistoryTask.append(", null");
-        insertHistoryTask.append(", '" + userId + "'");
-        insertHistoryTask.append(", sysdate");
-        insertHistoryTask.append(", null");
-        insertHistoryTask.append(", null");
-        insertHistoryTask.append(", null");
-        insertHistoryTask.append(", 50");
-        insertHistoryTask.append(", null)");
-        sqlSession.getConnection().createStatement().execute(insertHistoryTask.toString());
+        counter = 1;
+        ps = connection.prepareStatement("insert into act_hi_taskinst values(?, ?, ?, ?, ?, null, ?, null, null, ?, ?, null, null, null, ?, null)");
+        ps.setString(counter++, newTaskId.toString());
+        ps.setString(counter++, processDefinitionId + "'");
+        ps.setString(counter++, taskDefinitionKey + "'");
+        ps.setString(counter++, processInstanceId);
+        ps.setString(counter++, newExecutionId.toString());
+        ps.setString(counter++, task.getName());
+        ps.setString(counter++, userId);
+        ps.setTimestamp(counter++, new Timestamp(System.currentTimeMillis()));
+        ps.setInt(counter++, task.getPriority());
+        ps.executeUpdate();
 
         // 更新主键ID
-        String updateNextId = "update ACT_GE_PROPERTY set VALUE_ = " + nextId + " where NAME_ = 'next.dbid'";
-        sqlSession.getConnection().createStatement().execute(updateNextId);
+        String updateNextId = "update ACT_GE_PROPERTY set VALUE_ = ? where NAME_ = ?";
+        ps = connection.prepareStatement(updateNextId);
+        ps.setLong(1, nextId);
+        ps.setString(2, "next.dbid");
 
-        // 更新多实例相关变量
+        /*
+         * 更新多实例相关变量
+         */
         List<HistoricVariableInstance> list = historyService.createHistoricVariableInstanceQuery().processInstanceId(processInstanceId)
                 .variableNameLike("nrOf%").list();
         Integer nrOfInstances = 0;
@@ -228,16 +232,23 @@ public class RuntimeTaskHelper extends AbstractHelper {
           }
         }
 
+        // 多实例变量加一
         nrOfInstances++;
         nrOfActiveInstances++;
 
-        String updateVariablesOfMultiinstance = "update ACT_HI_VARINST set LONG_ = " + nrOfInstances + ", TEXT_ = " + nrOfInstances + " where EXECUTION_ID_ = "
-                + executionEntityOfMany.getParentId() + " and NAME_ = 'nrOfInstances'";
-        sqlSession.getConnection().createStatement().execute(updateVariablesOfMultiinstance);
+        String updateVariablesOfMultiinstance = "update ACT_HI_VARINST set LONG_ = ?, TEXT_ = ? where EXECUTION_ID_ = ? and NAME_ = ?";
+        ps = connection.prepareStatement(updateVariablesOfMultiinstance);
+        ps.setLong(1, nrOfInstances);
+        ps.setString(2, String.valueOf(nrOfInstances));
+        ps.setString(3, executionEntityOfMany.getParentId());
+        ps.setString(4, "nrOfInstances");
+        ps.executeUpdate();
 
-        updateVariablesOfMultiinstance = "update ACT_HI_VARINST set LONG_ = " + nrOfActiveInstances + ", TEXT_ = " + nrOfActiveInstances
-                + " where EXECUTION_ID_ = " + executionEntityOfMany.getParentId() + " and NAME_ = 'nrOfActiveInstances'";
-        sqlSession.getConnection().createStatement().execute(updateVariablesOfMultiinstance);
+        ps.setLong(1, nrOfInstances);
+        ps.setString(2, String.valueOf(nrOfActiveInstances));
+        ps.setString(3, executionEntityOfMany.getParentId());
+        ps.setString(4, "nrOfActiveInstances");
+        ps.executeUpdate();
 
       }
 
@@ -245,9 +256,15 @@ public class RuntimeTaskHelper extends AbstractHelper {
     } catch (Exception e) {
       logger.error("failed to add sign for countersign", e);
     } finally {
+      if (ps != null) {
+        try {
+          ps.close();
+        } catch (SQLException e) {
+          // do nothing
+        }
+      }
       sqlSession.close();
     }
 
   }
-
 }

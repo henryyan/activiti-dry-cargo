@@ -50,7 +50,7 @@ public class AbstractHelper {
   /**
    * 开启一个mybatis的session，切记要关闭
    */
-  protected SqlSession getSqlSession() {
+  protected SqlSession openSession() {
     ProcessEngineConfigurationImpl peci = (ProcessEngineConfigurationImpl) processEngineConfiguration;
     DbSqlSessionFactory dbSqlSessionFactory = (DbSqlSessionFactory) peci.getSessionFactories().get(DbSqlSession.class);
     SqlSessionFactory sqlSessionFactory = dbSqlSessionFactory.getSqlSessionFactory();
