@@ -13,9 +13,11 @@
 
 package me.kafeitu.activiti.extra.test.repository;
 
+import java.io.File;
 import java.util.Map;
 
 import me.kafeitu.activiti.extra.helper.ProcessDefinitionHelper;
+import me.kafeitu.activiti.extra.utils.OSValidator;
 
 import org.activiti.engine.RepositoryService;
 import org.activiti.engine.repository.ProcessDefinition;
@@ -57,6 +59,22 @@ public class ProcessDefinitionHelperTest extends SpringActivitiTestCase {
     assertEquals(2, keys.size());
     assertEquals(keys.get("usertask1"), "Task One");
     assertEquals(keys.get("usertask2"), "Task Two");
+  }
+
+  @Test
+  @Deployment(resources = "me/kafeitu/activiti/extra/test/runtime/AutoAssignee.bpmn")
+  public void testExportDiagramToFile() throws Exception {
+    ProcessDefinition processDefinition = repositoryService.createProcessDefinitionQuery().latestVersion().singleResult();
+    String dir = "/tmp";
+    if (OSValidator.isWindows()) {
+      dir = "c:\\";
+    }
+    String exportDiagramToFile = processDefinitionHelper.exportDiagramToFile(processDefinition, dir);
+    assertNotNull(exportDiagramToFile);
+    File file = new File(exportDiagramToFile);
+    assertTrue(file.exists());
+
+    file.deleteOnExit();
   }
 
 }

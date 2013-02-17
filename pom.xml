@@ -35,6 +35,9 @@
 		<junit.version>4.10</junit.version>
 		<mockito.version>1.9.0</mockito.version>
 		<powermock.version>1.4.12</powermock.version>
+		
+		<!-- utils -->
+		<commons-io.version>2.4</commons-io.version>
 
 		<!-- plugins -->
 		<jdk.version>1.6</jdk.version>
@@ -97,6 +100,15 @@
 			<version>${log4j.version}</version>
 		</dependency>
 		<!-- LOGGING end -->
+		
+		<!-- UTILS begin -->
+		<dependency>
+			<groupId>commons-io</groupId>
+			<artifactId>commons-io</artifactId>
+			<version>${commons-io.version}</version>
+		</dependency>
+		<!-- UTILS end -->
+		
 
 		<!-- TEST begin -->
 		<dependency>
