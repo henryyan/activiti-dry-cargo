@@ -2,7 +2,7 @@ package me.kafeitu.activiti.extra.form;
 
 import java.util.Arrays;
 
-import org.activiti.engine.impl.form.AbstractFormType;
+import org.activiti.engine.form.AbstractFormType;
 import org.apache.commons.lang.ObjectUtils;
 import org.apache.commons.lang.StringUtils;
 

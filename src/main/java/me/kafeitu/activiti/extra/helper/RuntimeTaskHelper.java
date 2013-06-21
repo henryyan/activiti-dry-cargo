@@ -199,7 +199,7 @@ public class RuntimeTaskHelper extends AbstractHelper {
 
         // history task
         counter = 1;
-        ps = connection.prepareStatement("insert into act_hi_taskinst values(?, ?, ?, ?, ?, null, ?, null, null, ?, ?, null, null, null, ?, null)");
+        ps = connection.prepareStatement("insert into act_hi_taskinst values(?, ?, ?, ?, ?, null, ?, null, null, ?, ?, null, null, null, ?, null, null, null)");
         ps.setString(counter++, newTaskId.toString());
         ps.setString(counter++, processDefinitionId + "'");
         ps.setString(counter++, taskDefinitionKey + "'");
@@ -260,7 +260,7 @@ public class RuntimeTaskHelper extends AbstractHelper {
         try {
           ps.close();
         } catch (SQLException e) {
-          // do nothing
+          logger.error("failed on execute sql", e);
         }
       }
       sqlSession.close();
