@@ -3,7 +3,7 @@
 	<modelVersion>4.0.0</modelVersion>
 	<groupId>org.activiti</groupId>
 	<artifactId>activiti-dry-cargo</artifactId>
-	<version>1.1.0</version>
+	<version>1.2.0-SNAPSHOT</version>
 
 	<!-- developers -->
 	<developers>
@@ -19,7 +19,7 @@
 	<!-- project's properties -->
 	<properties>
 		<!-- activiti -->
-		<activiti.version>5.12</activiti.version>
+		<activiti.version>5.13</activiti.version>
 
 		<!-- spring -->
 		<spring.version>3.1.2.RELEASE</spring.version>
